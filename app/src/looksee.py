@@ -1,7 +1,8 @@
-import duckdb
-import pathlib
-import toml
 import subprocess
+from pathlib import Path
+
+import duckdb
+import toml
 from loguru import logger
 
 
@@ -9,7 +10,9 @@ class LookSee:
     def __init__(self, config_path="looksee.toml"):
         # Load configuration from TOML file
         try:
-            with open(config_path, "rb") as f:
+            config_path = Path.cwd() / "app" / config_path
+            print(f"config_path: {config_path}")
+            with open(config_path, "r") as f:
                 self.config = toml.load(f)
         except FileNotFoundError:
             raise FileNotFoundError(f"Configuration file '{config_path}' not found.")
@@ -17,9 +20,11 @@ class LookSee:
             raise RuntimeError(f"Error loading configuration file '{config_path}': {e}")
 
         # Initialize DuckDB connection and settings
-        self.conn = duckdb.connect(database=':memory:', read_only=False)
+        self.conn = duckdb.connect(database=":memory:", read_only=False)
         self.table_name = self.config["settings"].get("default_table_name", "dataset")
-        logger.add(self.config["settings"].get("log_file", "looksee.log"), rotation="500 MB")
+        logger.add(
+            self.config["settings"].get("log_file", "looksee.log"), rotation="500 MB"
+        )
 
         logger.info("LookSee initialized with configuration from looksee.toml.")
 
@@ -36,7 +41,7 @@ class LookSee:
         """
         try:
             file_path = str(file_path)
-            file_type = pathlib.Path(file_path).suffix[1:]  # Get file extension without the dot
+            file_type = Path(file_path).suffix[1:]  # Get file extension without the dot
             read_function = self._get_duckdb_read_function(file_type)
 
             if not read_function:
@@ -70,7 +75,7 @@ class LookSee:
                 GROUP BY column_name, data_type;
             """
             metadata_df = self.conn.execute(query).fetchdf()
-            
+
             # Convert metadata to dictionary for display
             self.metadata = metadata_df.to_dict(orient="records")
             logger.info("Metadata extracted successfully.")
@@ -117,10 +122,19 @@ class LookSee:
             subprocess.run(render_command, check=True)
 
             # Step 2: Publish the rendered document to Posit Connect
-            publish_command = ["quarto", "publish", "connect", qmd_file, "--server", server_url]
+            publish_command = [
+                "quarto",
+                "publish",
+                "connect",
+                qmd_file,
+                "--server",
+                server_url,
+            ]
             logger.info(f"Publishing Quarto document: {' '.join(publish_command)}")
             subprocess.run(publish_command, check=True)
 
-            logger.info(f"Quarto document '{qmd_file}' published successfully to {server_url}.")
+            logger.info(
+                f"Quarto document '{qmd_file}' published successfully to {server_url}."
+            )
         except subprocess.CalledProcessError as e:
             logger.error(f"Error during rendering or publishing: {e}")
