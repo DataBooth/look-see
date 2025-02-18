@@ -1,0 +1,28 @@
+---
+title: "LookSee Report"
+format: html
+---
+
+## Metadata Summary
+
+```python
+from looksee import LookSee
+
+# Initialise LookSee and ingest data
+
+looksee = LookSee()
+looksee.ingest_data('data.csv')
+looksee.extract_metadata()
+
+# Display metadata
+
+metadata = looksee.display_metadata()
+metadata
+
+# Column Summary
+
+# Example column summary for 'age'
+
+column_summary = looksee.column_summary('age')
+column_summary
+```

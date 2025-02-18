@@ -1,0 +1,8 @@
+[read_functions]
+csv = "read_csv_auto"
+parquet = "read_parquet"
+json = "read_json_auto"
+
+[settings]
+default_table_name = "dataset"
+log_file = "looksee.log"
