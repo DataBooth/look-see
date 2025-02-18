@@ -1,5 +1,4 @@
 [datasets]
-netflix = "https://raw.githubusercontent.com/Perplexity-AI/demo-datasets/main/netflix_top10.csv"
-weather = "https://raw.githubusercontent.com/Perplexity-AI/demo-datasets/main/weather.parquet"
-iris = "https://gist.githubusercontent.com/netj/8836201/raw/iris.csv"
+netflix = "https://raw.githubusercontent.com/thitirat-mnc/Netflix-top10-dataset/refs/heads/main/all-weeks-countries.tsv"
+#iris = "https://gist.githubusercontent.com/netj/8836201/raw/iris.csv"
 titanic = "https://raw.githubusercontent.com/datasciencedojo/datasets/master/titanic.csv"

@@ -1,5 +1,6 @@
 [read_functions]
 csv = "read_csv"
+tsv = "read_csv"
 parquet = "read_parquet"
 json = "read_json"
 
