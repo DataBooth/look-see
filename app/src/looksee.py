@@ -100,27 +100,41 @@ class LookSee:
         Extract metadata for the dataset.
         """
         try:
-            # Query column names, types, and counts
-            query = f"""
-                SELECT 
-                    column_name,
-                    data_type,
-                    COUNT(*) OVER () AS total_rows,
-                    COUNT(*) - COUNT(column_name) AS null_count,
-                    COUNT(DISTINCT column_name) AS unique_count
-                FROM {self.table_name}
-                CROSS JOIN (SELECT * FROM information_schema.columns WHERE table_name = '{self.table_name}') AS cols
-                WHERE cols.column_name = column_name
-                GROUP BY column_name, data_type;
+            # Query column names and data types
+            column_info_query = f"""
+                SELECT column_name, data_type
+                FROM information_schema.columns
+                WHERE table_name = '{self.table_name}';
             """
-            metadata_df = self.conn.execute(query).fetchdf()
+            columns_info = self.conn.execute(column_info_query).fetchall()
 
-            # Convert metadata to dictionary for display
-            self.metadata = metadata_df.to_dict(orient="records")
+            metadata = []
+            for column_name, data_type in columns_info:
+                # Query to get total rows, null count, and unique count for each column
+                query = f"""
+                    SELECT 
+                        (SELECT COUNT(*) FROM {self.table_name}) AS total_rows,
+                        COUNT(*) - COUNT("{column_name}") AS null_count,
+                        COUNT(DISTINCT "{column_name}") AS unique_count
+                    FROM {self.table_name};
+                """
+                result = self.conn.execute(query).fetchone()
+                total_rows, null_count, unique_count = result
+
+                metadata.append({
+                    "column_name": column_name,
+                    "data_type": data_type,
+                    "total_rows": total_rows,
+                    "null_count": null_count,
+                    "unique_count": unique_count,
+                })
+
+            self.metadata = metadata
             logger.info("Metadata extracted successfully.")
         except Exception as e:
             logger.error(f"Error extracting metadata: {e}")
             self.metadata = []  # Set an empty list if extraction fails
+
 
     def column_summary(self, column_name):
         """
@@ -259,8 +273,13 @@ def main():
     looksee = LookSee()
 
     # Process each dataset
+    i_dataset = 0
     for dataset_name, dataset_url in demo_datasets.items():
-        print(f"\nProcessing dataset: {dataset_name}")
+        i_dataset += 1
+        print()
+        print("-" * 60)
+        print(f"Processing dataset: {dataset_name} - {dataset_url}")
+        print("-" * 60)
 
         # Ingest data
         if looksee.ingest_data(dataset_url):
@@ -283,6 +302,7 @@ def main():
         else:
             print(f"Failed to ingest dataset: {dataset_name}")
 
+        logger.info(f"\nProcessed {i_dataset} of {len(demo_datasets.items())} datasets")
 
 if __name__ == "__main__":
     main()
