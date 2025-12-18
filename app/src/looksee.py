@@ -5,6 +5,7 @@ import duckdb
 import toml
 from loguru import logger
 from tabulate import tabulate
+from functools import cache
 
 
 class LookSee:
@@ -24,7 +25,7 @@ class LookSee:
         self.conn = duckdb.connect(database=":memory:", read_only=False)
         self.table_name = self.config["settings"].get("default_table_name", "dataset")
         logger.add(
-            self.config["settings"].get("log_file", "looksee.log"), rotation="500 MB"
+            self.config["settings"].get("log_file", "looksee.log"), rotation="2 MB"
         )
 
         logger.info("LookSee initialized with configuration from looksee.toml.")
@@ -35,11 +36,15 @@ class LookSee:
         """
         read_functions = self.config["read_functions"]
         return read_functions.get(file_type.lower())
-
-    def ingest_data(self, file_path):
+    
+    @cache
+    def ingest_data(self, file_path, uploaded_file_name=None):
         try:
             file_path = str(file_path)
-            file_type = Path(file_path).suffix[1:]
+            if uploaded_file_name:
+                file_type = Path(uploaded_file_name).suffix[1:]  # Use uploaded file name
+            else:
+                file_type = Path(file_path).suffix[1:]
             read_function = self._get_duckdb_read_function(file_type)
 
             if not read_function:
@@ -50,10 +55,11 @@ class LookSee:
             query = f"""
             CREATE TABLE {self.table_name} AS 
             SELECT * FROM {read_function}('{file_path}', 
-                                        sample_size=20480, 
-                                        all_varchar=false)
+                                            sample_size=20480, 
+                                            all_varchar=false)
             """
             self.conn.execute(query)
+            print(query.strip())
             logger.info(f"Data ingested successfully from {file_path}.")
 
             validation_results = self.validate_column_types()
@@ -67,6 +73,7 @@ class LookSee:
         except Exception as e:
             logger.error(f"Error ingesting data: {e}")
             return False
+
 
     def validate_column_types(self):
         """
